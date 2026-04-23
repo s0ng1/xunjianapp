@@ -74,11 +74,9 @@ export function AlertsPageClient({ alerts }: AlertsPageClientProps) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>告警项</th>
-                <th>资产</th>
-                <th>等级</th>
+                <th>终端告警</th>
+                <th>严重程度</th>
                 <th>状态</th>
-                <th>检出时间</th>
               </tr>
             </thead>
             <tbody>
@@ -90,13 +88,12 @@ export function AlertsPageClient({ alerts }: AlertsPageClientProps) {
                 >
                   <td>
                     <div className="cell-primary">
-                      <span className="cell-link cell-link-static">{alert.title}</span>
-                      <span>{alert.description}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="cell-primary">
-                      <span>{alert.assetName}</span>
+                      <span className={`cell-link-static text-glow-${alert.severity === "high" ? "red" : "yellow"}`}>
+                        {formatAlertTerminalLine(alert)}
+                      </span>
+                      <span>
+                        {alert.description} :: {alert.assetName}
+                      </span>
                       <span className="mono">{alert.assetIp}</span>
                     </div>
                   </td>
@@ -108,13 +105,12 @@ export function AlertsPageClient({ alerts }: AlertsPageClientProps) {
                   <td>
                     <span className="badge tone-info">{formatAlertStatus(alert.status)}</span>
                   </td>
-                  <td>{formatDateTime(alert.detectedAt)}</td>
                 </tr>
               ))}
 
               {filteredAlerts.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={3}>
                     <div className="empty-inline">当前没有真实告警数据。</div>
                   </td>
                 </tr>
@@ -169,4 +165,10 @@ export function AlertsPageClient({ alerts }: AlertsPageClientProps) {
       </aside>
     </div>
   );
+}
+
+function formatAlertTerminalLine(alert: AlertItem): string {
+  const marker = alert.severity === "high" ? "[!!!]" : "[!!]";
+  const severity = alert.severity === "high" ? "HIGH" : "MEDIUM";
+  return `[${formatDateTime(alert.detectedAt)}] ${marker} ${alert.title} :: ${alert.assetIp} :: ${severity}`;
 }

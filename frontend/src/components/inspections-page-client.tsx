@@ -58,36 +58,45 @@ export function InspectionsPageClient({ inspections }: InspectionsPageClientProp
 
       <div className="table-shell">
         <table className="data-table">
-          <thead>
-            <tr>
-              <th>时间</th>
-              <th>资产</th>
-              <th>巡检类型</th>
-              <th>状态</th>
-              <th>结果摘要</th>
-            </tr>
+            <thead>
+              <tr>
+                <th>任务 ID</th>
+                <th>资产</th>
+                <th>巡检类型</th>
+                <th>开始 / 结束时间</th>
+                <th>状态</th>
+                <th>进度</th>
+                <th>结果摘要</th>
+              </tr>
           </thead>
           <tbody>
             {filteredInspections.map((inspection) => (
               <tr key={inspection.id}>
                 <td>
                   <div className="cell-primary">
-                    <span>{formatDateTime(inspection.startedAt)}</span>
-                    <span>{inspection.duration}</span>
+                    <span className="mono">{inspection.id}</span>
+                    <span>{inspection.operator}</span>
                   </div>
                 </td>
                 <td>
                   <div className="cell-primary">
                     <span>{inspection.assetName}</span>
-                    <span>{inspection.operator}</span>
+                    <span className="mono">{inspection.assetIp}</span>
                   </div>
                 </td>
                 <td>{formatInspectionType(inspection.type)}</td>
+                <td>
+                  <div className="cell-primary">
+                    <span>{formatDateTime(inspection.startedAt)}</span>
+                    <span>结束 {inspection.duration}</span>
+                  </div>
+                </td>
                 <td>
                   <span className={`badge tone-${mapInspectionStatusBadge(inspection.status)}`}>
                     {formatInspectionStatus(inspection.status)}
                   </span>
                 </td>
+                <td className="mono">{formatAsciiProgress(inspection.status)}</td>
                 <td>
                   <div className="cell-primary">
                     <span>{inspection.summary}</span>
@@ -99,7 +108,7 @@ export function InspectionsPageClient({ inspections }: InspectionsPageClientProp
 
             {filteredInspections.length === 0 ? (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={7}>
                   <div className="empty-inline">当前没有真实巡检记录。</div>
                 </td>
               </tr>
@@ -119,4 +128,14 @@ function mapInspectionStatusBadge(status: InspectionListItem["status"]): "normal
     return "medium";
   }
   return "critical";
+}
+
+function formatAsciiProgress(status: InspectionListItem["status"]): string {
+  if (status === "success") {
+    return "[██████████] 100%";
+  }
+  if (status === "partial") {
+    return "[████████░░] 80%";
+  }
+  return "[██░░░░░░░░] 20%";
 }

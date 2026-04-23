@@ -197,6 +197,15 @@ class LinuxBaselineRuleEngine:
             return ParsedValue(value=None, evidence=str(item["error"]), unknown_reason="采集命令执行失败")
 
         raw_output = self._get_collected_output(item)
+
+        # Check for permission/command execution errors in output
+        if self._output_has_command_error(raw_output):
+            return ParsedValue(
+                value=None,
+                evidence=raw_output.strip(),
+                unknown_reason="采集命令执行失败（权限不足或命令不存在）",
+            )
+
         if rule.parse.type == "regex":
             return self._parse_regex(raw_output, rule.parse)
         if rule.parse.type == "json":
@@ -289,6 +298,34 @@ class LinuxBaselineRuleEngine:
         if isinstance(value, (list, tuple, set, dict)):
             return len(value) == 0
         return str(value).strip() == ""
+
+    # Patterns indicating command execution failure (permission denied, not found, etc.)
+    _COMMAND_ERROR_PATTERNS = (
+        "permission denied",
+        "cannot open",
+        "no such file",
+        "not found",
+        "operation not permitted",
+        "access denied",
+        "command not found",
+        "unable to",
+        "error",
+    )
+
+    def _output_has_command_error(self, raw_output: str) -> bool:
+        """Check if output indicates a command execution error rather than legitimate empty result."""
+        if not raw_output.strip():
+            return False
+        lowered = raw_output.lower()
+        # If the output contains error-like text (not just "error" as a keyword in config),
+        # and appears to be an error message rather than actual data, flag it
+        for pattern in self._COMMAND_ERROR_PATTERNS:
+            if pattern in lowered:
+                # Additional check: if output looks like an error message (short, single line)
+                lines = [l.strip() for l in raw_output.strip().splitlines() if l.strip()]
+                if len(lines) <= 2 and pattern in lines[0].lower():
+                    return True
+        return False
 
     def _extract_assignment_tokens(self, raw_output: str) -> dict[str, str]:
         assignments: dict[str, str] = {}

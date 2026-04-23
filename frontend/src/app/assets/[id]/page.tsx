@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DetailSections } from "@/components/detail-sections";
-import { DashboardShell } from "@/components/dashboard-shell";
+import { AssetTimeline } from "@/components/features/assets/asset-timeline";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatePanel } from "@/components/state-panel";
 import {
   fetchAssets,
@@ -74,60 +74,64 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
         title={asset.name}
         description="详情页展示真实巡检结果和后端派生风险。"
       >
-        <section className="panel-card">
-          <div className="section-head">
-            <div>
-              <h3>基本信息</h3>
-              <p>当前信息全部来自真实资产台账与巡检结果。</p>
+        <div className="asset-detail-layout">
+          <section className="panel-card asset-profile-card">
+            <div className="section-head">
+              <div>
+                <h3>基本信息</h3>
+                <p>当前信息全部来自真实资产台账与巡检结果。</p>
+              </div>
+              <Link href="/assets" className="text-action">
+                返回资产列表
+              </Link>
             </div>
-            <Link href="/assets" className="text-action">
-              返回资产列表
-            </Link>
-          </div>
 
-          <div className="info-grid">
-            <article className="info-card">
-              <span>资产名称</span>
-              <strong>{asset.name}</strong>
-              <p>ID {asset.id}</p>
-            </article>
-            <article className="info-card">
-              <span>IP 地址</span>
-              <strong className="mono">{asset.ip}</strong>
-              <p>纳管对象</p>
-            </article>
-            <article className="info-card">
-              <span>资产类型</span>
-              <strong>{formatAssetType(asset.type)}</strong>
-              <p>按资产类型自动匹配巡检来源</p>
-            </article>
-            <article className="info-card">
-              <span>接入配置</span>
-              <strong>{asset.connection_type.toUpperCase()} / {asset.port}</strong>
-              <p>{asset.username ?? "未配置用户名"}</p>
-            </article>
-            <article className="info-card">
-              <span>凭据状态</span>
-              <strong>{asset.credential_configured ? "已配置" : "未配置"}</strong>
-              <p>{asset.is_enabled ? "资产已启用" : "资产已停用"}</p>
-            </article>
-            <article className="info-card">
-              <span>最近巡检</span>
-              <strong>{formatDateTime(detail.lastInspectionAt)}</strong>
-              <p>{detail.latestInspection?.message ?? "当前没有巡检记录"}</p>
-            </article>
-            <article className="info-card">
-              <span>纳管时间</span>
-              <strong>{formatDateTime(asset.created_at)}</strong>
-              <p>来自后端资产接口</p>
-            </article>
-            <article className="info-card">
-              <span>当前状态</span>
-              <strong>{detail.statusLabel}</strong>
-              <p>根据最近一次巡检自动计算</p>
-            </article>
-          </div>
-        </section>
+            <div className="asset-profile-grid">
+              <article className="info-card">
+                <span>资产名称</span>
+                <strong>{asset.name}</strong>
+                <p>ID {asset.id}</p>
+              </article>
+              <article className="info-card">
+                <span>IP 地址</span>
+                <strong className="mono">{asset.ip}</strong>
+                <p>纳管对象</p>
+              </article>
+              <article className="info-card">
+                <span>资产类型</span>
+                <strong>{formatAssetType(asset.type)}</strong>
+                <p>按资产类型自动匹配巡检来源</p>
+              </article>
+              <article className="info-card">
+                <span>接入配置</span>
+                <strong>{asset.connection_type.toUpperCase()} / {asset.port}</strong>
+                <p>{asset.username ?? "未配置用户名"}</p>
+              </article>
+              <article className="info-card">
+                <span>凭据状态</span>
+                <strong>{asset.credential_configured ? "已配置" : "未配置"}</strong>
+                <p>{asset.is_enabled ? "资产已启用" : "资产已停用"}</p>
+              </article>
+              <article className="info-card">
+                <span>最近巡检</span>
+                <strong>{formatDateTime(detail.lastInspectionAt)}</strong>
+                <p>{detail.latestInspection?.message ?? "当前没有巡检记录"}</p>
+              </article>
+              <article className="info-card">
+                <span>纳管时间</span>
+                <strong>{formatDateTime(asset.created_at)}</strong>
+                <p>来自后端资产接口</p>
+              </article>
+              <article className="info-card">
+                <span>当前状态</span>
+                <strong>{detail.statusLabel}</strong>
+                <p>根据最近一次巡检自动计算</p>
+              </article>
+            </div>
+          </section>
+
+          <AssetTimeline asset={asset} detail={detail} />
+        </div>
 
         {detailNotice ? (
           <StatePanel
@@ -135,30 +139,6 @@ export default async function AssetDetailPage({ params }: AssetDetailPageProps) 
             title={detailNotice.title}
             description={detailNotice.description}
           />
-        ) : null}
-
-        <DetailSections detail={detail} />
-
-        {detail.rawOutputs.length > 0 ? (
-          <section className="section-card">
-            <div className="section-header">
-              <div>
-                <h3 className="section-title">原始输出</h3>
-                <p className="section-description">
-                  展示后端返回的最近一次巡检原始文本，默认折叠。
-                </p>
-              </div>
-            </div>
-
-            <div className="detail-stack">
-              {detail.rawOutputs.map((output) => (
-                <details key={output.key} className="fold-card">
-                  <summary>{output.title}</summary>
-                  <pre className="mono">{output.content}</pre>
-                </details>
-              ))}
-            </div>
-          </section>
         ) : null}
       </DashboardShell>
     );

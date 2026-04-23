@@ -14,15 +14,15 @@ LEGACY_LINUX_COLLECTION_PLAN: tuple[LinuxCollectCommand, ...] = (
     LinuxCollectCommand(
         key="legacy_open_ports",
         collect_type="command",
-        command='sh -lc "ss -tulnH 2>/dev/null || netstat -tuln 2>/dev/null"',
+        command='sh -lc "ss -tulnH 2>&1 || netstat -tuln 2>&1"',
     ),
     LinuxCollectCommand(
         key="legacy_ssh_config",
         collect_type="config",
         command=(
             'sh -lc "if command -v sshd >/dev/null 2>&1; then '
-            "sshd -T 2>/dev/null || grep -Ev '^[[:space:]]*(#|$)' /etc/ssh/sshd_config 2>/dev/null; "
-            "else grep -Ev '^[[:space:]]*(#|$)' /etc/ssh/sshd_config 2>/dev/null; fi\""
+            "sshd -T 2>&1 || grep -Ev '^[[:space:]]*(#|$)' /etc/ssh/sshd_config 2>&1; "
+            "else grep -Ev '^[[:space:]]*(#|$)' /etc/ssh/sshd_config 2>&1; fi\""
         ),
     ),
     LinuxCollectCommand(
@@ -30,11 +30,11 @@ LEGACY_LINUX_COLLECTION_PLAN: tuple[LinuxCollectCommand, ...] = (
         collect_type="command",
         command=(
             'sh -lc "printf \'__FIREWALLD__\\n\'; '
-            '(systemctl is-active firewalld 2>/dev/null || echo unavailable); '
+            '(systemctl is-active firewalld 2>&1 || echo unavailable); '
             "printf '\\n__UFW__\\n'; "
-            '(ufw status 2>/dev/null || echo unavailable); '
+            '(ufw status 2>&1 || echo unavailable); '
             "printf '\\n__IPTABLES__\\n'; "
-            '(iptables -L -n 2>/dev/null || echo unavailable)"'
+            '(iptables -L -n 2>&1 || echo unavailable)"'
         ),
     ),
     LinuxCollectCommand(
@@ -42,11 +42,11 @@ LEGACY_LINUX_COLLECTION_PLAN: tuple[LinuxCollectCommand, ...] = (
         collect_type="command",
         command=(
             'sh -lc "printf \'__TIMEDATECTL__\\n\'; '
-            '(timedatectl status 2>/dev/null || echo unavailable); '
+            '(timedatectl status 2>&1 || echo unavailable); '
             "printf '\\n__SERVICE__\\n'; "
-            '((systemctl is-active chronyd 2>/dev/null || '
-            'systemctl is-active chrony 2>/dev/null || '
-            'systemctl is-active ntpd 2>/dev/null) || echo unavailable)"'
+            '((systemctl is-active chronyd 2>&1 || '
+            'systemctl is-active chrony 2>&1 || '
+            'systemctl is-active ntpd 2>&1) || echo unavailable)"'
         ),
     ),
     LinuxCollectCommand(
@@ -54,9 +54,9 @@ LEGACY_LINUX_COLLECTION_PLAN: tuple[LinuxCollectCommand, ...] = (
         collect_type="command",
         command=(
             'sh -lc "printf \'__AUDITD__\\n\'; '
-            '(systemctl is-active auditd 2>/dev/null || service auditd status 2>/dev/null || echo unavailable); '
+            '(systemctl is-active auditd 2>&1 || service auditd status 2>&1 || echo unavailable); '
             "printf '\\n__AUDITCTL__\\n'; "
-            '(auditctl -s 2>/dev/null || echo unavailable)"'
+            '(auditctl -s 2>&1 || echo unavailable)"'
         ),
     ),
 )

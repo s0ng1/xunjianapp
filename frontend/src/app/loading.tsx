@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/dashboard-shell";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export default function Loading() {
   return (

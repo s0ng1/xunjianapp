@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import re
+import shlex
 
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]")
 BACKSPACE_RE = re.compile(r"[^\n]\x08")
+EXIT_STATUS_MARKER_RE = re.compile(r"(?:\n|^)__XUNJIAN_EXIT_STATUS__:(?P<status>\d+)\s*$")
 
 
 @dataclass(slots=True)
@@ -106,18 +108,25 @@ class LinuxInspectorClient:
         for item in collection_plan:
             try:
                 output = connection.send_command(
-                    item.command,
+                    self._wrap_command_with_exit_status(item.command),
                     strip_prompt=True,
                     strip_command=True,
                     read_timeout=self.command_read_timeout_seconds,
                 )
-                normalized_output = self._normalize_terminal_output(output)
+                raw_output = self._remove_exit_status_marker(output)
+                normalized_output = self._normalize_terminal_output(raw_output)
+                exit_status = self._extract_exit_status(output)
+                error = self._build_collection_error(
+                    item=item,
+                    normalized_output=normalized_output,
+                    exit_status=exit_status,
+                )
                 entry = CollectedDataEntry(
                     type=item.collect_type,
                     command=item.command,
-                    raw_output=output,
+                    raw_output=raw_output,
                     normalized_output=normalized_output,
-                    error=None,
+                    error=error,
                 )
             except Exception as exc:
                 logger.warning("Linux collection command failed key=%s error=%s", item.key, type(exc).__name__)
@@ -130,6 +139,54 @@ class LinuxInspectorClient:
                 )
             results[item.key] = entry.model_dump()
         return results
+
+    def _wrap_command_with_exit_status(self, command: str) -> str:
+        script = (
+            f"({command}) 2>&1\n"
+            "__xunjian_status=$?\n"
+            "printf '\\n__XUNJIAN_EXIT_STATUS__:%s\\n' \"$__xunjian_status\""
+        )
+        return f"sh -lc {shlex.quote(script)}"
+
+    def _remove_exit_status_marker(self, output: str | None) -> str:
+        return EXIT_STATUS_MARKER_RE.sub("", str(output or ""))
+
+    def _extract_exit_status(self, output: str | None) -> int | None:
+        match = EXIT_STATUS_MARKER_RE.search(str(output or ""))
+        if match is None:
+            return None
+        return int(match.group("status"))
+
+    def _build_collection_error(
+        self,
+        *,
+        item: LinuxCollectCommand,
+        normalized_output: str,
+        exit_status: int | None,
+    ) -> str | None:
+        if exit_status is None:
+            return None
+        if exit_status == 0:
+            return None
+        if item.key.startswith("legacy_") or self._output_indicates_command_error(normalized_output):
+            return f"Command exited with status {exit_status}"
+        return None
+
+    def _output_indicates_command_error(self, output: str) -> bool:
+        lowered = output.strip().lower()
+        if not lowered:
+            return False
+        error_patterns = (
+            "permission denied",
+            "cannot open",
+            "no such file",
+            "not found",
+            "operation not permitted",
+            "access denied",
+            "command not found",
+            "unable to",
+        )
+        return any(pattern in lowered for pattern in error_patterns)
 
     def _get_output(self, collected_data: dict[str, dict], key: str) -> str:
         entry = collected_data.get(key) or {}

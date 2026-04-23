@@ -9,7 +9,7 @@
     "collect": {
       "type": "command",
       "cache_key": "shadow_empty_passwords",
-      "command": "awk -F: '($2==\"\"){print $1}' /etc/shadow 2>/dev/null"
+      "command": "awk -F: '($2==\"\"){print $1}' /etc/shadow 2>&1"
     },
     "parse": {
       "type": "logic",
@@ -36,7 +36,7 @@
     "collect": {
       "type": "config",
       "cache_key": "login_defs_pass_max_days",
-      "command": "awk '/^[[:space:]]*PASS_MAX_DAYS[[:space:]]+/ {print $2; exit}' /etc/login.defs 2>/dev/null"
+      "command": "awk '/^[[:space:]]*PASS_MAX_DAYS[[:space:]]+/ {print $2; exit}' /etc/login.defs 2>&1"
     },
     "parse": {
       "type": "logic",
@@ -63,7 +63,7 @@
     "collect": {
       "type": "command",
       "cache_key": "telnet_service_state",
-      "command": "sh -lc '(systemctl is-enabled telnet.socket 2>/dev/null || systemctl is-enabled telnet 2>/dev/null || echo disabled); (systemctl is-active telnet.socket 2>/dev/null || systemctl is-active telnet 2>/dev/null || echo inactive)'"
+      "command": "sh -lc '(systemctl is-enabled telnet.socket 2>&1 || systemctl is-enabled telnet 2>&1 || echo disabled); (systemctl is-active telnet.socket 2>&1 || systemctl is-active telnet 2>&1 || echo inactive)'"
     },
     "parse": {
       "type": "logic",
@@ -90,7 +90,7 @@
     "collect": {
       "type": "command",
       "cache_key": "ssh_service_state",
-      "command": "sh -lc '(systemctl is-enabled sshd 2>/dev/null || systemctl is-enabled ssh 2>/dev/null || echo unavailable); (systemctl is-active sshd 2>/dev/null || systemctl is-active ssh 2>/dev/null || echo unavailable)'"
+      "command": "sh -lc '(systemctl is-enabled sshd 2>&1 || systemctl is-enabled ssh 2>&1 || echo unavailable); (systemctl is-active sshd 2>&1 || systemctl is-active ssh 2>&1 || echo unavailable)'"
     },
     "parse": {
       "type": "logic",
@@ -117,7 +117,7 @@
     "collect": {
       "type": "command",
       "cache_key": "legacy_auditd_status",
-      "command": "sh -lc \"printf '__AUDITD__\\n'; (systemctl is-active auditd 2>/dev/null || service auditd status 2>/dev/null || echo unavailable); printf '\\n__AUDITCTL__\\n'; (auditctl -s 2>/dev/null || echo unavailable)\""
+      "command": "sh -lc \"printf '__AUDITD__\\n'; (systemctl is-active auditd 2>&1 || service auditd status 2>&1 || echo unavailable); printf '\\n__AUDITCTL__\\n'; (auditctl -s 2>&1 || echo unavailable)\""
     },
     "parse": {
       "type": "logic",
@@ -144,7 +144,7 @@
     "collect": {
       "type": "config",
       "cache_key": "uid0_accounts",
-      "command": "awk -F: '($3==0){print $1}' /etc/passwd 2>/dev/null"
+      "command": "awk -F: '($3==0){print $1}' /etc/passwd 2>&1"
     },
     "parse": {
       "type": "logic",
@@ -171,7 +171,7 @@
     "collect": {
       "type": "config",
       "cache_key": "sudoers_risky_entries",
-      "command": "sh -lc \"grep -REh '^[^#].*NOPASSWD|^[^#].*ALL=\\(ALL(:ALL)?\\) ALL' /etc/sudoers /etc/sudoers.d 2>/dev/null\""
+      "command": "sh -lc \"grep -REh '^[^#].*NOPASSWD|^[^#].*ALL=\\(ALL(:ALL)?\\) ALL' /etc/sudoers /etc/sudoers.d 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -198,7 +198,7 @@
     "collect": {
       "type": "config",
       "cache_key": "passwd_shadow_permissions",
-      "command": "sh -lc \"stat -c '%n %a %U %G' /etc/passwd /etc/shadow 2>/dev/null\""
+      "command": "sh -lc \"stat -c '%n %a %U %G' /etc/passwd /etc/shadow 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -225,7 +225,7 @@
     "collect": {
       "type": "command",
       "cache_key": "selinux_status",
-      "command": "sh -lc \"getenforce 2>/dev/null || (test -r /sys/fs/selinux/enforce && cat /sys/fs/selinux/enforce) || grep -Eh '^[[:space:]]*SELINUX=' /etc/selinux/config 2>/dev/null || sestatus 2>/dev/null || echo unavailable\""
+      "command": "sh -lc \"getenforce 2>&1 || (test -r /sys/fs/selinux/enforce && cat /sys/fs/selinux/enforce) || grep -Eh '^[[:space:]]*SELINUX=' /etc/selinux/config 2>&1 || sestatus 2>&1 || echo unavailable\""
     },
     "parse": {
       "type": "logic",
@@ -252,7 +252,7 @@
     "collect": {
       "type": "command",
       "cache_key": "legacy_firewall_status",
-      "command": "sh -lc \"printf '__FIREWALLD__\\n'; (systemctl is-active firewalld 2>/dev/null || echo unavailable); printf '\\n__UFW__\\n'; (ufw status 2>/dev/null || echo unavailable); printf '\\n__IPTABLES__\\n'; (iptables -L -n 2>/dev/null || echo unavailable)\""
+      "command": "sh -lc \"printf '__FIREWALLD__\\n'; (systemctl is-active firewalld 2>&1 || echo unavailable); printf '\\n__UFW__\\n'; (ufw status 2>&1 || echo unavailable); printf '\\n__IPTABLES__\\n'; (iptables -L -n 2>&1 || echo unavailable)\""
     },
     "parse": {
       "type": "logic",
@@ -279,7 +279,7 @@
     "collect": {
       "type": "command",
       "cache_key": "legacy_open_ports",
-      "command": "sh -lc \"ss -tulnH 2>/dev/null || netstat -tuln 2>/dev/null\""
+      "command": "sh -lc \"ss -tulnH 2>&1 || netstat -tuln 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -306,7 +306,7 @@
     "collect": {
       "type": "config",
       "cache_key": "pam_pwquality_config",
-      "command": "sh -lc \"grep -Eh '^[[:space:]]*(minlen|minclass|dcredit|ucredit|lcredit|ocredit|maxrepeat|maxclassrepeat|retry)[[:space:]]*=' /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>/dev/null; grep -Eh 'pam_pwquality\\.so|pam_cracklib\\.so' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-password 2>/dev/null\""
+      "command": "sh -lc \"grep -Eh '^[[:space:]]*(minlen|minclass|dcredit|ucredit|lcredit|ocredit|maxrepeat|maxclassrepeat|retry)[[:space:]]*=' /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>&1; grep -Eh 'pam_pwquality\\.so|pam_cracklib\\.so' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-password 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -333,7 +333,7 @@
     "collect": {
       "type": "config",
       "cache_key": "pam_faillock_config",
-      "command": "sh -lc \"grep -Eh 'pam_faillock\\.so|pam_tally2\\.so|deny=|unlock_time=|fail_interval=' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-auth /etc/pam.d/common-account /etc/security/faillock.conf 2>/dev/null\""
+      "command": "sh -lc \"grep -Eh 'pam_faillock\\.so|pam_tally2\\.so|deny=|unlock_time=|fail_interval=' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-auth /etc/pam.d/common-account /etc/security/faillock.conf 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -360,7 +360,7 @@
     "collect": {
       "type": "command",
       "cache_key": "audit_log_permissions",
-      "command": "sh -lc \"stat -c '%n %a %U %G' /var/log/audit /var/log/audit/audit.log 2>/dev/null\""
+      "command": "sh -lc \"stat -c '%n %a %U %G' /var/log/audit /var/log/audit/audit.log 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -387,7 +387,7 @@
     "collect": {
       "type": "command",
       "cache_key": "audit_process_status",
-      "command": "sh -lc \"auditctl -s 2>/dev/null || echo unavailable\""
+      "command": "sh -lc \"auditctl -s 2>&1 || echo unavailable\""
     },
     "parse": {
       "type": "logic",
@@ -414,7 +414,7 @@
     "collect": {
       "type": "config",
       "cache_key": "interactive_system_accounts",
-      "command": "awk -F: '($3<1000 && $1!=\"root\" && $7 !~ /(nologin|false)$/){print $1\":\"$7}' /etc/passwd 2>/dev/null"
+      "command": "awk -F: '($3<1000 && $1!=\"root\" && $7 !~ /(nologin|false)$/){print $1\":\"$7}' /etc/passwd 2>&1"
     },
     "parse": {
       "type": "logic",
@@ -441,7 +441,7 @@
     "collect": {
       "type": "config",
       "cache_key": "interactive_user_accounts",
-      "command": "awk -F: '($3>=1000 && $7 !~ /(nologin|false)$/){print $1\":\"$3\":\"$7}' /etc/passwd 2>/dev/null"
+      "command": "awk -F: '($3>=1000 && $7 !~ /(nologin|false)$/){print $1\":\"$3\":\"$7}' /etc/passwd 2>&1"
     },
     "parse": {
       "type": "logic",
@@ -468,7 +468,7 @@
     "collect": {
       "type": "command",
       "cache_key": "enabled_services",
-      "command": "sh -lc \"systemctl list-unit-files --type=service --state=enabled 2>/dev/null || chkconfig --list 2>/dev/null\""
+      "command": "sh -lc \"systemctl list-unit-files --type=service --state=enabled 2>&1 || chkconfig --list 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -495,7 +495,7 @@
     "collect": {
       "type": "config",
       "cache_key": "hosts_access_control",
-      "command": "sh -lc \"printf '__ALLOW__\\n'; cat /etc/hosts.allow 2>/dev/null; printf '\\n__DENY__\\n'; cat /etc/hosts.deny 2>/dev/null; printf '\\n__SSHD__\\n'; (sshd -T 2>/dev/null | grep -Ei '^(allowusers|allowgroups|denyusers|denygroups|listenaddress)' || grep -Eh '^[[:space:]]*(AllowUsers|AllowGroups|DenyUsers|DenyGroups|ListenAddress|Match[[:space:]]+Address)\\b' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null)\""
+      "command": "sh -lc \"printf '__ALLOW__\\n'; cat /etc/hosts.allow 2>&1; printf '\\n__DENY__\\n'; cat /etc/hosts.deny 2>&1; printf '\\n__SSHD__\\n'; (sshd -T 2>&1 | grep -Ei '^(allowusers|allowgroups|denyusers|denygroups|listenaddress)' || grep -Eh '^[[:space:]]*(AllowUsers|AllowGroups|DenyUsers|DenyGroups|ListenAddress|Match[[:space:]]+Address)\\b' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>&1)\""
     },
     "parse": {
       "type": "logic",
@@ -522,7 +522,7 @@
     "collect": {
       "type": "command",
       "cache_key": "package_updates",
-      "command": "sh -lc \"apt list --upgradable 2>/dev/null || yum check-update 2>/dev/null || dnf check-update 2>/dev/null || zypper list-updates 2>/dev/null\""
+      "command": "sh -lc \"apt list --upgradable 2>&1 || yum check-update 2>&1 || dnf check-update 2>&1 || zypper list-updates 2>&1\""
     },
     "parse": {
       "type": "logic",
@@ -549,7 +549,7 @@
     "collect": {
       "type": "command",
       "cache_key": "ids_presence",
-      "command": "sh -lc \"ps -ef | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd' | grep -v grep 2>/dev/null; systemctl list-unit-files 2>/dev/null | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd'\""
+      "command": "sh -lc \"ps -ef | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd' | grep -v grep 2>&1; systemctl list-unit-files 2>&1 | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd'\""
     },
     "parse": {
       "type": "logic",

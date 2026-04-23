@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 import { AssetsTableClient } from "@/components/assets-table-client";
-import { DashboardShell } from "@/components/dashboard-shell";
-import { OperationsConsole } from "@/components/operations-console";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { OperationsConsole } from "@/components/features/inspections/operations-console";
 import { StatePanel } from "@/components/state-panel";
 import type { Asset, LinuxInspection, SwitchInspection } from "@/lib/api";
 import { buildAssetOverviewList, type AssetOverview } from "@/lib/inspection-view";

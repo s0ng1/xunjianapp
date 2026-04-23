@@ -1,6 +1,6 @@
 import type { FocusRiskOverviewData } from "@/components/focus-risk-overview";
 import { DailyFocusPanel } from "@/components/daily-focus-panel";
-import { DashboardShell } from "@/components/dashboard-shell";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatePanel } from "@/components/state-panel";
 import {
   fetchDailyFocus,

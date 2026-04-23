@@ -284,10 +284,11 @@ export function buildAlertsList(
       return normalizedType === "linux" || normalizedType === "switch";
     })
     .flatMap((asset) => {
+      const normalizedType = asset.type.toLowerCase();
       const inspection =
-        asset.type.toLowerCase() === "linux"
-          ? latestLinuxInspectionMap.get(asset.ip)
-          : latestSwitchInspectionMap.get(asset.ip);
+        normalizedType === "linux"
+          ? latestLinuxInspectionMap.get(`asset:${asset.id}`) ?? latestLinuxInspectionMap.get(`ip:${asset.ip}`)
+          : latestSwitchInspectionMap.get(`asset:${asset.id}`) ?? latestSwitchInspectionMap.get(`ip:${asset.ip}`);
       return inspection ? buildAlertsForInspection(asset, inspection) : [];
     })
     .sort((left, right) => {

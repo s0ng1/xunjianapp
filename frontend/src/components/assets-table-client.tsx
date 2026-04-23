@@ -144,7 +144,9 @@ export function AssetsTableClient({ assets, selectedAssetId, onRequestAction }: 
                     </div>
                   </td>
                   <td>
-                    <span className={`badge tone-${mapOverviewStatusBadge(item.statusTone)}`}>{item.statusLabel}</span>
+                    <span className={`badge tone-${mapOverviewStatusBadge(item.statusTone)}`}>
+                      {formatTerminalStatus(item.statusTone)}
+                    </span>
                   </td>
                   <td>
                     <div className="cell-primary">
@@ -253,6 +255,19 @@ function mapOverviewStatusBadge(statusTone: AssetOverview["statusTone"]): "criti
 
 function mapOverviewRiskBadge(riskTone: "critical" | "medium" | "normal"): "critical" | "medium" | "normal" {
   return riskTone;
+}
+
+function formatTerminalStatus(statusTone: AssetOverview["statusTone"]): string {
+  if (statusTone === "healthy") {
+    return "● ONLINE";
+  }
+  if (statusTone === "warning") {
+    return "◐ DEGRADED";
+  }
+  if (statusTone === "critical") {
+    return "◐ DEGRADED";
+  }
+  return "○ OFFLINE";
 }
 
 function formatOverviewRisk(riskTone: "critical" | "medium" | "normal"): string {

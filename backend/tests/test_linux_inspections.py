@@ -574,8 +574,10 @@ def test_linux_inspector_logs_unexpected_errors(monkeypatch, caplog) -> None:
 class FakeTerminalConnection:
     def __init__(self, output: str) -> None:
         self.output = output
+        self.commands: list[str] = []
 
     def send_command(self, command: str, *, strip_prompt: bool, strip_command: bool, read_timeout: int) -> str:
+        self.commands.append(command)
         return self.output
 
 
@@ -591,6 +593,36 @@ def test_linux_inspector_collect_normalizes_terminal_output() -> None:
     assert collected_data["ssh_config"]["raw_output"] == "\u001b[?2004lport 22\r\npermitrootlogin no\r\n"
     assert collected_data["ssh_config"]["normalized_output"] == "port 22\npermitrootlogin no\n"
     assert inspector._get_output(collected_data, "ssh_config") == "port 22\npermitrootlogin no\n"
+
+
+def test_linux_inspector_collect_strips_exit_status_marker() -> None:
+    inspector = linux_client_module.LinuxInspectorClient()
+    connection = FakeTerminalConnection("port 22\n__XUNJIAN_EXIT_STATUS__:0\n")
+
+    collected_data = inspector._collect(
+        connection=connection,
+        collection_plan=[LinuxCollectCommand(key="ssh_config", collect_type="command", command="cat /etc/ssh/sshd_config")],
+    )
+
+    assert "2>&1" in connection.commands[0]
+    assert "__XUNJIAN_EXIT_STATUS__" in connection.commands[0]
+    assert collected_data["ssh_config"]["raw_output"] == "port 22"
+    assert collected_data["ssh_config"]["normalized_output"] == "port 22"
+    assert collected_data["ssh_config"]["error"] is None
+
+
+def test_linux_inspector_collect_marks_legacy_empty_failure_as_error() -> None:
+    inspector = linux_client_module.LinuxInspectorClient()
+    connection = FakeTerminalConnection("__XUNJIAN_EXIT_STATUS__:127\n")
+
+    collected_data = inspector._collect(
+        connection=connection,
+        collection_plan=[LinuxCollectCommand(key="legacy_open_ports", collect_type="command", command="ss -tulnH 2>&1")],
+    )
+
+    assert collected_data["legacy_open_ports"]["raw_output"] == ""
+    assert collected_data["legacy_open_ports"]["normalized_output"] == ""
+    assert collected_data["legacy_open_ports"]["error"] == "Command exited with status 127"
 
 
 def test_linux_rule_engine_prefers_normalized_output_for_evidence() -> None:
