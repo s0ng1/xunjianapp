@@ -19,6 +19,7 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "port_scans",
     "baseline_check_results",
     "daily_focus_item_states",
+    "scheduled_tasks",
 )
 
 
