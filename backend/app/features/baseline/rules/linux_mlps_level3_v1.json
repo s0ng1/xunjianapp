@@ -1,0 +1,655 @@
+[
+  {
+    "id": "linux_empty_password_accounts",
+    "name": "检查空口令账户",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "shadow_empty_passwords",
+      "command": "awk -F: '($2==\"\"){print $1}' /etc/shadow 2>/dev/null"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "line_list"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现空口令账户。",
+      "fail_message": "发现空口令账户。",
+      "unknown_message": "无法自动确认是否存在空口令账户。"
+    },
+    "remediation": "为命中账户设置复杂口令，或直接禁用不再使用的账户。"
+  },
+  {
+    "id": "linux_password_validity_days",
+    "name": "口令有效期不超过 90 天",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "login_defs_pass_max_days",
+      "command": "awk '/^[[:space:]]*PASS_MAX_DAYS[[:space:]]+/ {print $2; exit}' /etc/login.defs 2>/dev/null"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "integer"
+    },
+    "expect": {
+      "operator": "less_or_equal",
+      "value": 90
+    },
+    "result": {
+      "pass_message": "口令有效期配置符合要求。",
+      "fail_message": "口令有效期过长。",
+      "unknown_message": "无法自动确认口令有效期策略。"
+    },
+    "remediation": "在 /etc/login.defs 中将 PASS_MAX_DAYS 调整为不大于 90，并评估业务影响。"
+  },
+  {
+    "id": "linux_telnet_disabled",
+    "name": "禁用 Telnet 远程管理",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "telnet_service_state",
+      "command": "sh -lc '(systemctl is-enabled telnet.socket 2>/dev/null || systemctl is-enabled telnet 2>/dev/null || echo disabled); (systemctl is-active telnet.socket 2>/dev/null || systemctl is-active telnet 2>/dev/null || echo inactive)'"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "telnet_disabled"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "Telnet 服务未启用。",
+      "fail_message": "Telnet 远程管理仍处于启用状态。",
+      "unknown_message": "无法自动确认 Telnet 服务状态。"
+    },
+    "remediation": "停止并禁用 telnet/telnet.socket，仅保留 SSH 作为远程运维入口。"
+  },
+  {
+    "id": "linux_ssh_service_enabled",
+    "name": "启用 SSH 安全管理通道",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "ssh_service_state",
+      "command": "sh -lc '(systemctl is-enabled sshd 2>/dev/null || systemctl is-enabled ssh 2>/dev/null || echo unavailable); (systemctl is-active sshd 2>/dev/null || systemctl is-active ssh 2>/dev/null || echo unavailable)'"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "ssh_service_enabled"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "SSH 服务状态正常。",
+      "fail_message": "SSH 服务未启用或未运行。",
+      "unknown_message": "无法自动确认 SSH 服务状态。"
+    },
+    "remediation": "启用并运行 sshd/ssh 服务，同时结合 SSH 配置策略限制 root 登录与密码认证。"
+  },
+  {
+    "id": "linux_auditd_enabled",
+    "name": "启用 auditd 审计服务",
+    "category": "security_audit",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "legacy_auditd_status",
+      "command": "sh -lc \"printf '__AUDITD__\\n'; (systemctl is-active auditd 2>/dev/null || service auditd status 2>/dev/null || echo unavailable); printf '\\n__AUDITCTL__\\n'; (auditctl -s 2>/dev/null || echo unavailable)\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "auditd_enabled"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "auditd 服务已启用。",
+      "fail_message": "auditd 服务未启用。",
+      "unknown_message": "无法自动确认 auditd 状态。"
+    },
+    "remediation": "安装并执行 systemctl enable --now auditd，确认审计规则已成功加载。"
+  },
+  {
+    "id": "linux_uid0_unique_root",
+    "name": "仅 root 账户具备 UID 0",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "uid0_accounts",
+      "command": "awk -F: '($3==0){print $1}' /etc/passwd 2>/dev/null"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "uid0_non_root_accounts"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现额外的 UID 0 账户。",
+      "fail_message": "发现非 root 的 UID 0 账户。",
+      "unknown_message": "无法自动确认 UID 0 账户情况。"
+    },
+    "remediation": "将非 root 的 UID 0 账户改回普通 UID，或禁用不再使用的高权限账户。"
+  },
+  {
+    "id": "linux_sudo_nopasswd_absent",
+    "name": "不存在高风险 sudo 免密授权",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "sudoers_risky_entries",
+      "command": "sh -lc \"grep -REh '^[^#].*NOPASSWD|^[^#].*ALL=\\(ALL(:ALL)?\\) ALL' /etc/sudoers /etc/sudoers.d 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "sudo_nopasswd_risk"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现明显高风险 sudo 免密授权。",
+      "fail_message": "发现高风险 sudo 授权配置。",
+      "unknown_message": "无法自动确认 sudo 授权风险。"
+    },
+    "remediation": "清理不必要的 NOPASSWD 和过宽 ALL 授权，最小化 sudo 使用范围。"
+  },
+  {
+    "id": "linux_passwd_shadow_permissions",
+    "name": "/etc/passwd 与 /etc/shadow 权限安全",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "passwd_shadow_permissions",
+      "command": "sh -lc \"stat -c '%n %a %U %G' /etc/passwd /etc/shadow 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "secure_passwd_shadow_permissions"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "关键账户文件权限符合要求。",
+      "fail_message": "关键账户文件权限过宽或归属异常。",
+      "unknown_message": "无法自动确认关键账户文件权限。"
+    },
+    "remediation": "确保 /etc/passwd 权限不高于 644、/etc/shadow 不高于 640，且所有者为 root。"
+  },
+  {
+    "id": "linux_selinux_enforcing",
+    "name": "SELinux 处于 Enforcing",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "selinux_status",
+      "command": "sh -lc \"getenforce 2>/dev/null || (test -r /sys/fs/selinux/enforce && cat /sys/fs/selinux/enforce) || grep -Eh '^[[:space:]]*SELINUX=' /etc/selinux/config 2>/dev/null || sestatus 2>/dev/null || echo unavailable\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "selinux_enforcing"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "SELinux 处于强制模式。",
+      "fail_message": "SELinux 未处于强制模式。",
+      "unknown_message": "无法自动确认 SELinux 状态。"
+    },
+    "remediation": "评估业务兼容性后将 SELinux 调整为 Enforcing，并修正必要策略。"
+  },
+  {
+    "id": "linux_firewall_enabled",
+    "name": "主机防火墙已启用",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "legacy_firewall_status",
+      "command": "sh -lc \"printf '__FIREWALLD__\\n'; (systemctl is-active firewalld 2>/dev/null || echo unavailable); printf '\\n__UFW__\\n'; (ufw status 2>/dev/null || echo unavailable); printf '\\n__IPTABLES__\\n'; (iptables -L -n 2>/dev/null || echo unavailable)\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "firewall_enabled"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "主机防火墙状态正常。",
+      "fail_message": "主机防火墙未启用或规则缺失。",
+      "unknown_message": "无法自动确认防火墙状态。"
+    },
+    "remediation": "启用 firewalld/ufw 或持久化 iptables 规则，并收敛放通范围。"
+  },
+  {
+    "id": "linux_high_risk_ports_absent",
+    "name": "不存在高危对外监听端口",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "legacy_open_ports",
+      "command": "sh -lc \"ss -tulnH 2>/dev/null || netstat -tuln 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "risky_ports_present"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现高危对外监听端口。",
+      "fail_message": "发现高危对外监听端口。",
+      "unknown_message": "无法自动确认高危端口暴露情况。"
+    },
+    "remediation": "关闭无必要监听服务，或将高风险端口限制在可信源地址访问。"
+  },
+  {
+    "id": "linux_pam_password_complexity",
+    "name": "PAM 口令复杂度策略",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "pam_pwquality_config",
+      "command": "sh -lc \"grep -Eh '^[[:space:]]*(minlen|minclass|dcredit|ucredit|lcredit|ocredit|maxrepeat|maxclassrepeat|retry)[[:space:]]*=' /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>/dev/null; grep -Eh 'pam_pwquality\\.so|pam_cracklib\\.so' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-password 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "pam_pwquality"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "已检测到较完整的口令复杂度策略。",
+      "fail_message": "未检测到有效的口令复杂度策略。",
+      "unknown_message": "已采集到部分 PAM 配置，但仍需人工确认复杂度策略是否满足等保三级要求。"
+    },
+    "remediation": "补充 pam_pwquality 或 pam_cracklib 配置，明确最小长度、字符类别和重试次数。"
+  },
+  {
+    "id": "linux_login_failure_lock",
+    "name": "登录失败锁定策略",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "pam_faillock_config",
+      "command": "sh -lc \"grep -Eh 'pam_faillock\\.so|pam_tally2\\.so|deny=|unlock_time=|fail_interval=' /etc/pam.d/system-auth /etc/pam.d/password-auth /etc/pam.d/common-auth /etc/pam.d/common-account /etc/security/faillock.conf 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "faillock_configured"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "已检测到登录失败锁定策略。",
+      "fail_message": "未检测到登录失败锁定策略。",
+      "unknown_message": "已采集到部分锁定配置，但仍需人工确认阈值是否满足制度要求。"
+    },
+    "remediation": "配置 pam_faillock 或 pam_tally2，明确 deny、unlock_time、fail_interval 等参数。"
+  },
+  {
+    "id": "linux_audit_log_protection",
+    "name": "审计日志文件权限保护",
+    "category": "security_audit",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "audit_log_permissions",
+      "command": "sh -lc \"stat -c '%n %a %U %G' /var/log/audit /var/log/audit/audit.log 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "audit_log_protection"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "审计日志目录和文件权限较为收敛。",
+      "fail_message": "审计日志目录或文件权限过宽。",
+      "unknown_message": "已采集到审计日志权限信息，但仍需人工确认备份、留存和完整性策略。"
+    },
+    "remediation": "收敛 /var/log/audit 目录及日志文件权限，并补充备份留存策略。"
+  },
+  {
+    "id": "linux_audit_process_protection",
+    "name": "审计进程保护状态",
+    "category": "security_audit",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "audit_process_status",
+      "command": "sh -lc \"auditctl -s 2>/dev/null || echo unavailable\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "audit_process_protection"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "审计规则处于较强保护状态。",
+      "fail_message": "审计规则未进入不可变保护状态。",
+      "unknown_message": "当前仅能部分判断审计进程保护状态，仍需人工确认。"
+    },
+    "remediation": "评估后启用 auditctl 不可变模式，并确保审计策略无法被普通运维随意修改。"
+  },
+  {
+    "id": "linux_default_accounts_review",
+    "name": "默认系统账户登录能力复核",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "interactive_system_accounts",
+      "command": "awk -F: '($3<1000 && $1!=\"root\" && $7 !~ /(nologin|false)$/){print $1\":\"$7}' /etc/passwd 2>/dev/null"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "interactive_system_accounts"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现可直接登录的默认系统账户。",
+      "fail_message": "发现可直接登录的默认系统账户。",
+      "unknown_message": "需要结合业务确认默认账户是否保留及是否具备远程登录能力。"
+    },
+    "remediation": "禁用不需要的默认账户登录 Shell，并核对相关服务是否仍依赖这些账户。"
+  },
+  {
+    "id": "linux_redundant_accounts_review",
+    "name": "多余账户人工复核",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "interactive_user_accounts",
+      "command": "awk -F: '($3>=1000 && $7 !~ /(nologin|false)$/){print $1\":\"$3\":\"$7}' /etc/passwd 2>/dev/null"
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "interactive_user_accounts"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现多余账户。",
+      "fail_message": "发现疑似多余账户。",
+      "unknown_message": "已列出可交互账号，但是否属于多余账户需要人工确认。"
+    },
+    "remediation": "结合人员、主机职责和最近登录记录，清理不再使用的本地交互账号。"
+  },
+  {
+    "id": "linux_minimum_installation",
+    "name": "最小安装原则复核",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "enabled_services",
+      "command": "sh -lc \"systemctl list-unit-files --type=service --state=enabled 2>/dev/null || chkconfig --list 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "suspicious_enabled_services"
+    },
+    "expect": {
+      "operator": "empty",
+      "value": []
+    },
+    "result": {
+      "pass_message": "未发现明显的高风险多余服务。",
+      "fail_message": "发现疑似不应启用的高风险服务。",
+      "unknown_message": "最小安装原则无法仅凭服务清单完全判定，仍需人工确认。"
+    },
+    "remediation": "关闭无业务必要的高风险服务，形成最小安装基线并与资产用途对照复核。"
+  },
+  {
+    "id": "linux_management_ip_restriction",
+    "name": "管理访问源地址限制",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "config",
+      "cache_key": "hosts_access_control",
+      "command": "sh -lc \"printf '__ALLOW__\\n'; cat /etc/hosts.allow 2>/dev/null; printf '\\n__DENY__\\n'; cat /etc/hosts.deny 2>/dev/null; printf '\\n__SSHD__\\n'; (sshd -T 2>/dev/null | grep -Ei '^(allowusers|allowgroups|denyusers|denygroups|listenaddress)' || grep -Eh '^[[:space:]]*(AllowUsers|AllowGroups|DenyUsers|DenyGroups|ListenAddress|Match[[:space:]]+Address)\\b' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null)\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "hosts_access_restriction"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "检测到管理访问源地址限制痕迹。",
+      "fail_message": "未检测到有效的管理访问源地址限制。",
+      "unknown_message": "已采集 hosts.allow/deny，但是否真实生效需要人工结合 SSH 和网络 ACL 继续确认。"
+    },
+    "remediation": "结合 SSH 配置、防火墙和网络 ACL 限制管理源地址，避免对不可信网络开放运维入口。"
+  },
+  {
+    "id": "linux_patch_update_status",
+    "name": "补丁更新状态",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "package_updates",
+      "command": "sh -lc \"apt list --upgradable 2>/dev/null || yum check-update 2>/dev/null || dnf check-update 2>/dev/null || zypper list-updates 2>/dev/null\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "package_updates"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "未发现待安装更新。",
+      "fail_message": "发现待安装更新。",
+      "unknown_message": "已采集到更新信息，但是否属于安全补丁、是否允许延期需人工确认。"
+    },
+    "remediation": "结合业务窗口确认待更新包中是否包含安全补丁，并形成补丁评估与升级闭环。"
+  },
+  {
+    "id": "linux_ids_ips_presence",
+    "name": "IDS/IPS 部署痕迹",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "low",
+    "check_type": "semi-auto",
+    "collect": {
+      "type": "command",
+      "cache_key": "ids_presence",
+      "command": "sh -lc \"ps -ef | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd' | grep -v grep 2>/dev/null; systemctl list-unit-files 2>/dev/null | grep -E 'aide|osqueryd|wazuh|ossec|suricata|snort|clamd'\""
+    },
+    "parse": {
+      "type": "logic",
+      "logic": "ids_presence"
+    },
+    "expect": {
+      "operator": "bool_is",
+      "value": true
+    },
+    "result": {
+      "pass_message": "检测到安全代理或 IDS/IPS 部署痕迹。",
+      "fail_message": "未检测到安全代理或 IDS/IPS 部署痕迹。",
+      "unknown_message": "无法确认是否通过其他方式部署了主机入侵检测能力。"
+    },
+    "remediation": "部署主机入侵检测、完整性监测或等效可信安全机制，并纳入告警联动。"
+  },
+  {
+    "id": "linux_dual_factor_authentication",
+    "name": "双因子认证",
+    "category": "identity_authentication",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "manual",
+    "result": {
+      "pass_message": "已确认启用双因子认证。",
+      "fail_message": "未启用双因子认证。",
+      "unknown_message": "当前无法自动确认运维双因子认证是否全面启用。"
+    },
+    "remediation": "对管理登录接入双因子认证，并检查例外账号与应急账号是否全部纳管。",
+    "manual_check_hint": "请核查堡垒机、PAM、SSO 或 VPN 配置，确认所有管理登录均要求第二因子。"
+  },
+  {
+    "id": "linux_separation_of_duties",
+    "name": "三权分立与职责分离",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "manual",
+    "result": {
+      "pass_message": "已确认职责分离到位。",
+      "fail_message": "职责分离不满足要求。",
+      "unknown_message": "当前无法自动确认系统管理员、安全管理员和审计管理员是否完成职责分离。"
+    },
+    "remediation": "结合组织架构、账号矩阵和授权记录落实权限分离。"
+  },
+  {
+    "id": "linux_access_control_policy",
+    "name": "访问控制策略合理性",
+    "category": "access_control",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "manual",
+    "result": {
+      "pass_message": "已确认访问控制策略合理。",
+      "fail_message": "访问控制策略不合理。",
+      "unknown_message": "当前无法自动确认访问控制策略是否与主机职责、网络边界和账号权限矩阵一致。"
+    },
+    "remediation": "人工复核网络 ACL、防火墙、sudo 和账号授权矩阵，确保最小权限。"
+  },
+  {
+    "id": "linux_remote_management_network",
+    "name": "不可控网络远程管理复核",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "high",
+    "check_type": "manual",
+    "result": {
+      "pass_message": "已确认未通过不可控网络开展远程管理。",
+      "fail_message": "存在通过不可控网络远程管理的情况。",
+      "unknown_message": "当前无法自动判断远程管理链路是否穿越不可控网络。"
+    },
+    "remediation": "确认远程运维仅经受控网络、VPN、堡垒机或专线接入。"
+  },
+  {
+    "id": "linux_antivirus_or_trusted_mechanism",
+    "name": "防病毒或可信机制",
+    "category": "malware_protection",
+    "target_type": "linux",
+    "severity": "medium",
+    "check_type": "manual",
+    "result": {
+      "pass_message": "已确认部署防病毒或可信保护机制。",
+      "fail_message": "未部署防病毒或可信保护机制。",
+      "unknown_message": "当前无法自动确认恶意代码防范能力是否达到要求。"
+    },
+    "remediation": "根据主机用途部署防病毒、白名单或完整性保护等等效机制，并建立更新与告警闭环。"
+  },
+  {
+    "id": "linux_data_validity_check",
+    "name": "数据有效性检验",
+    "category": "security_protection",
+    "target_type": "linux",
+    "severity": "low",
+    "check_type": "not_applicable",
+    "result": {
+      "pass_message": "适用。",
+      "fail_message": "不适用。",
+      "unknown_message": "不适用。",
+      "not_applicable_message": "服务器侧通常不直接承担应用层数据有效性检验要求，此项在当前 Linux 基线中标记为不适用。"
+    },
+    "remediation": "如业务侧确有数据完整性校验要求，请在应用或数据库层另行设计控制措施。"
+  }
+]

@@ -1,0 +1,168 @@
+[
+  {
+    "rule_id": "linux_permit_root_login_disabled",
+    "name": "禁止 SSH Root 直接登录",
+    "device_type": "linux",
+    "risk_level": "high",
+    "check_method": "ssh_config_setting",
+    "judge_logic": "要求 sshd 配置中的 PermitRootLogin 为 no。",
+    "matcher": {
+      "operator": "equals",
+      "source": "ssh_config.settings.permitrootlogin",
+      "expected": "no",
+      "case_insensitive": true
+    },
+    "remediation": "修改 /etc/ssh/sshd_config，将 PermitRootLogin 设置为 no，并重载 sshd 服务。"
+  },
+  {
+    "rule_id": "linux_password_authentication_disabled",
+    "name": "禁用 SSH 密码认证",
+    "device_type": "linux",
+    "risk_level": "high",
+    "check_method": "ssh_config_setting",
+    "judge_logic": "要求 sshd 配置中的 PasswordAuthentication 为 no。",
+    "matcher": {
+      "operator": "equals",
+      "source": "ssh_config.settings.passwordauthentication",
+      "expected": "no",
+      "case_insensitive": true
+    },
+    "remediation": "修改 /etc/ssh/sshd_config，将 PasswordAuthentication 设置为 no，改用密钥认证。"
+  },
+  {
+    "rule_id": "linux_firewall_enabled",
+    "name": "启用主机防火墙",
+    "device_type": "linux",
+    "risk_level": "medium",
+    "check_method": "service_status",
+    "judge_logic": "要求 firewalld、ufw 或 iptables 规则至少有一种处于有效启用状态。",
+    "matcher": {
+      "operator": "firewall_enabled"
+    },
+    "remediation": "启用 firewalld 或 ufw，或至少下发有效的 iptables 规则后持久化。"
+  },
+  {
+    "rule_id": "linux_time_sync_enabled",
+    "name": "启用时间同步",
+    "device_type": "linux",
+    "risk_level": "medium",
+    "check_method": "service_status",
+    "judge_logic": "要求 timedatectl 显示系统时钟已同步，或 chronyd/chrony/ntpd 服务处于 active。",
+    "matcher": {
+      "operator": "time_sync_enabled"
+    },
+    "remediation": "配置 chronyd 或 ntpd，并确认 `timedatectl status` 显示同步正常。"
+  },
+  {
+    "rule_id": "linux_auditd_enabled",
+    "name": "启用 auditd 审计",
+    "device_type": "linux",
+    "risk_level": "high",
+    "check_method": "service_status",
+    "judge_logic": "要求 auditd 服务处于 active，或 auditctl 状态显示 enabled 1。",
+    "matcher": {
+      "operator": "auditd_enabled"
+    },
+    "remediation": "安装并启用 auditd，执行 `systemctl enable --now auditd`，确认审计规则已加载。"
+  },
+  {
+    "rule_id": "switch_telnet_disabled",
+    "name": "关闭 Telnet",
+    "device_type": "switch",
+    "risk_level": "high",
+    "check_method": "config_pattern",
+    "judge_logic": "要求配置中明确关闭 Telnet 服务，不允许出现 `telnet server enable`。",
+    "matcher": {
+      "operator": "explicit_match",
+      "source": "raw_config",
+      "pass_patterns": [
+        "undo telnet server enable"
+      ],
+      "fail_patterns": [
+        "(?m)^\\s*telnet server enable\\s*$"
+      ],
+      "regex": true,
+      "default_status": "unknown"
+    },
+    "remediation": "在系统视图下执行 `undo telnet server enable`，仅保留 SSH 远程管理。"
+  },
+  {
+    "rule_id": "switch_ssh_enabled",
+    "name": "启用 SSH 管理",
+    "device_type": "switch",
+    "risk_level": "high",
+    "check_method": "config_pattern",
+    "judge_logic": "要求配置中存在 `stelnet server enable`。",
+    "matcher": {
+      "operator": "explicit_match",
+      "source": "raw_config",
+      "pass_patterns": [
+        "(?m)^\\s*stelnet server enable\\s*$"
+      ],
+      "fail_patterns": [
+        "(?m)^\\s*undo stelnet server enable\\s*$"
+      ],
+      "regex": true,
+      "default_status": "fail"
+    },
+    "remediation": "在系统视图下启用 `stelnet server enable`，并配套配置本地用户或 AAA 认证。"
+  },
+  {
+    "rule_id": "switch_ntp_configured",
+    "name": "配置 NTP",
+    "device_type": "switch",
+    "risk_level": "medium",
+    "check_method": "config_pattern",
+    "judge_logic": "要求配置中存在 `ntp-service` 相关配置。",
+    "matcher": {
+      "operator": "contains_any",
+      "source": "raw_config",
+      "patterns": [
+        "(?m)^\\s*ntp-service\\s+"
+      ],
+      "regex": true,
+      "default_status": "fail"
+    },
+    "remediation": "配置可信 NTP 服务器，例如 `ntp-service unicast-server x.x.x.x`。"
+  },
+  {
+    "rule_id": "switch_syslog_configured",
+    "name": "配置 Syslog",
+    "device_type": "switch",
+    "risk_level": "medium",
+    "check_method": "config_pattern",
+    "judge_logic": "要求配置中存在远程日志主机配置，如 `info-center loghost`。",
+    "matcher": {
+      "operator": "contains_any",
+      "source": "raw_config",
+      "patterns": [
+        "(?m)^\\s*info-center loghost\\s+"
+      ],
+      "regex": true,
+      "default_status": "fail"
+    },
+    "remediation": "配置远程日志服务器，例如 `info-center loghost x.x.x.x facility local7`。"
+  },
+  {
+    "rule_id": "switch_aaa_configured",
+    "name": "配置 AAA",
+    "device_type": "switch",
+    "risk_level": "high",
+    "check_method": "config_pattern",
+    "judge_logic": "要求配置中存在 AAA 视图或认证相关配置。",
+    "matcher": {
+      "operator": "contains_any",
+      "source": "raw_config",
+      "patterns": [
+        "(?m)^\\s*aaa\\s*$",
+        "(?m)^\\s*authentication-scheme\\s+",
+        "(?m)^\\s*authorization-scheme\\s+",
+        "(?m)^\\s*accounting-scheme\\s+",
+        "(?m)^\\s*local-user\\s+"
+      ],
+      "regex": true,
+      "default_status": "fail"
+    },
+    "remediation": "配置 AAA、本地用户或接入 RADIUS/TACACS+，并将管理登录纳入 AAA 控制。"
+  }
+]

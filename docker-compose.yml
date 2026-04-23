@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sec}
+      POSTGRES_USER: ${POSTGRES_USER:-sec_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sec_user} -d ${POSTGRES_DB:-sec}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sec_user}:${POSTGRES_PASSWORD:-change_me}@db:5432/${POSTGRES_DB:-sec}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001}
+      DB_SCHEMA_INIT_MODE: ${DB_SCHEMA_INIT_MODE:-auto}
+      SSH_CONNECTION_TIMEOUT_SECONDS: ${SSH_CONNECTION_TIMEOUT_SECONDS:-10}
+      SSH_COMMAND_READ_TIMEOUT_SECONDS: ${SSH_COMMAND_READ_TIMEOUT_SECONDS:-120}
+      PORT_SCAN_CONNECT_TIMEOUT_SECONDS: ${PORT_SCAN_CONNECT_TIMEOUT_SECONDS:-1}
+      PORT_SCAN_DEFAULT_PORTS: ${PORT_SCAN_DEFAULT_PORTS:-22,80,443}
+      SSH_TEST_RATE_LIMIT: ${SSH_TEST_RATE_LIMIT:-5/minute}
+      LINUX_INSPECTION_RATE_LIMIT: ${LINUX_INSPECTION_RATE_LIMIT:-10/minute}
+      SWITCH_INSPECTION_RATE_LIMIT: ${SWITCH_INSPECTION_RATE_LIMIT:-10/minute}
+      PORT_SCAN_RATE_LIMIT: ${PORT_SCAN_RATE_LIMIT:-20/minute}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-local-dev-only-encryption-key}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      INTERNAL_API_BASE_URL: http://backend:8000
+      NODE_ENV: production
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:

@@ -1,0 +1,31 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+backend/.venv/
+backend/__pycache__/
+
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+.DS_Store
+Thumbs.db
+
+# Local assistant/runtime state
+.claude/
+.codex
+.playwright-mcp/
+
+# Unrelated nested repository
+qiushi-skill/
+
+# Local audit artifacts with environment-specific details
+AUDIT_REPORT_2026-04-12.md
+CURRENT_PROGRESS_SUMMARY_2026-04-12.md
+fa1.md
+validation-192.168.3.88-detail.png
