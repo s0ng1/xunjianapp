@@ -11,6 +11,7 @@ export type LinuxInspectionPayload = SSHTestPayload;
 
 export type SwitchInspectionPayload = SSHTestPayload & {
   vendor: string;
+  port?: number;
 };
 
 // Inspection result types

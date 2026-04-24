@@ -27,6 +27,8 @@ export type {
   AuditdStatusResult,
   BaselineCheckResult as BaselineCheckResult2,
 } from "./inspections";
+export { apiSubmitSwitchInspection } from "./switch-inspections";
+export type { SwitchInspectionSubmitPayload } from "./switch-inspections";
 export { baselineApi } from "./baseline";
 export type { BaselineRun as BaselineRun2 } from "./baseline";
 export { dailyFocusApi } from "./daily-focus";
