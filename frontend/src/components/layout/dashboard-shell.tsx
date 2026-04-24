@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: "/assets", label: "ASSETS", caption: "资产台账" },
   { href: "/alerts", label: "ALERTS", caption: "告警队列" },
   { href: "/inspections", label: "INSPECTIONS", caption: "巡检历史" },
+  { href: "/schedules", label: "SCHEDULES", caption: "任务调度" },
   { href: "/baseline", label: "BASELINE", caption: "基线检查" },
 ] as const;
 

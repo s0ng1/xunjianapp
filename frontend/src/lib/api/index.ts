@@ -39,3 +39,12 @@ export type {
   DailyFocusAssetGroup,
   DailyFocusPriorityDevice,
 } from "./daily-focus";
+export { scheduledTasksApi } from "./scheduled-tasks";
+export type {
+  ScheduledTask,
+  ScheduledTaskCreate,
+  ScheduledTaskUpdate,
+  ScheduledTaskTriggerResponse,
+  TaskType,
+  ScheduleType,
+} from "./scheduled-tasks";

@@ -10,6 +10,7 @@ import { BaselineRunPanel } from "./baseline-run-panel";
 import { LinuxInspectionPanel } from "./linux-inspection-panel";
 import { EmptyAssetStage, OperationStageHeader } from "./operation-panel-shared";
 import { PortScanPanel } from "./port-scan-panel";
+import { ScheduledTasksPanel } from "../scheduled-tasks/scheduled-tasks-panel";
 import { SshTestPanel } from "./ssh-test-panel";
 import { SwitchInspectionPanel } from "./switch-inspection-panel";
 
@@ -467,6 +468,16 @@ export function OperationsConsole({
             })}
           </div>
         ) : null}
+      </section>
+
+      <section className="section-card">
+        <div className="section-header">
+          <div>
+            <h3 className="section-title">调度任务</h3>
+            <p className="section-description">管理定时调度任务，支持立即触发、启用/禁用和编辑删除。</p>
+          </div>
+        </div>
+        <ScheduledTasksPanel assets={assets} />
       </section>
     </>
   );
